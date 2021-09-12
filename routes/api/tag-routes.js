@@ -8,7 +8,7 @@ router.get('/', async (req, res) => {
   // be sure to include its associated Product data
   try {
     const tagData = await Tag.findAll({
-      // include: [{ model: product }],
+      include: [{ model: Product, through: ProductTag }],
     });
     res.status(200).json(tagData);
   } catch (err) {
@@ -21,7 +21,7 @@ router.get('/:id', async (req, res) => {
   // be sure to include its associated Product data
   try {
     const tagData = await Tag.findByPk(req.params.id, {
-      // include: [{ model: product }],
+      include: [{ model: Product, through: ProductTag }],
     });
 
     if (!tagData) {
@@ -39,7 +39,7 @@ router.post('/', async (req, res) => {
   // create a new tag
   try {
     const newData = await Tag.create({
-      tag_id: req.body.tag_id,
+      id: req.body.id,
     });
     res.status(200).json(newData);
   } catch (err) {
@@ -57,29 +57,29 @@ router.put('/:id', (req, res) => {
     })
       .then((Tag) => {
         // find all associated tags from Tag
-        return Tag.findAll({ where: { Tag_id: req.params.id } });
+        return ProductTag.findAll({ where: { tag_id: req.params.id } });
       })
-      .then((TagTags) => {
+      .then((productTags) => {
         // get list of current tag_ids
-        const TagIds = TagTags.map(({ tag_id }) => tag_id);
+        const TagIds = productTags.map(({ tag_id }) => tag_id);
         // create filtered list of new tag_ids
         const newTag = req.body.tagIds
           .filter((tag_id) => !TagIds.includes(tag_id))
           .map((tag_id) => {
             return {
-              Tag_id: req.params.id,
+              product_id: req.params.id,
               tag_id,
             };
           });
         // figure out which ones to remove
-        const TagToRemove = Tag
+        const TagToRemove = productTags
           .filter(({ tag_id }) => !req.body.tagIds.includes(tag_id))
           .map(({ id }) => id);
   
         // run both actions
         return Promise.all([
-          Tag.destroy({ where: { id: TagTagsToRemove } }),
-          Tag.bulkCreate(newTag),
+          ProductTag.destroy({ where: { id: TagToRemove } }),
+          ProductTag.bulkCreate(newTag),
         ]);
       })
       .then((updatedProductTags) => res.json(updatedProductTags))
